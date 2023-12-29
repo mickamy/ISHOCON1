@@ -33,9 +33,9 @@ tfstateの管理をローカルで行う場合には、作成不要。
 
 ### 4. FIXMEを直す
 
-- [ ] terraform.tfの中のbucketに、先ほど作成したS3のbucket nameを入れる
+- [x] terraform.tfの中のbucketに、先ほど作成したS3のbucket nameを入れる
   - ローカルでtfstateを管理し、S3を使わない場合にはterraform.tfを削除する
-- [ ] users.tfにadmins, playersのGitHubアカウントIDを入れる
+- [x] users.tfにadmins, playersのGitHubアカウントIDを入れる
   - 詳細は[ドキュメント](https://docs.github.com/ja/github/authenticating-to-github/connecting-to-github-with-ssh)を参照のこと
   - adminsは全インスタンスに入ることができる
     
