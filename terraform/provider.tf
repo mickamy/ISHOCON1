@@ -8,6 +8,6 @@ terraform {
 }
 
 provider "aws" {
-  profile = "ishocon1"
+  profile = "981618352324_PowerUserAccess"
   region  = "ap-northeast-1"
 }
