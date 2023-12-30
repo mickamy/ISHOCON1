@@ -204,8 +204,17 @@ ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
 
 # さらに app code 改善
 
+- current_user を都度 DB からとってるのがやばいからなんとかする
+    - Sinatra よくわからないので、一旦複数とってるところは一回だけにする
 
-
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 11:14:00 Start GET /initialize
+2023/12/30 11:14:00 Benchmark Start!  Workload: 4
+2023/12/30 11:15:00 Benchmark Finish!
+2023/12/30 11:15:00 Score: 16345
+2023/12/30 11:15:00 Waiting for Stopping All Benchmarkers ...
+```
 
 
 

@@ -68,9 +68,10 @@ class Ishocon1::WebApp < Sinatra::Base
     end
 
     def already_bought?(product_id)
-      return false unless current_user
+      user = current_user
+      return false unless user
       count = db.xquery('SELECT count(*) as count FROM histories WHERE product_id = ? AND user_id = ?', \
-                        product_id, current_user[:id]).first[:count]
+                        product_id, user[:id]).first[:count]
       count > 0
     end
 
@@ -96,7 +97,8 @@ class Ishocon1::WebApp < Sinatra::Base
 
   post '/login' do
     authenticate(params['email'], params['password'])
-    update_last_login(current_user[:id])
+    user = current_user
+    update_last_login(user[:id])
     redirect '/'
   end
 
@@ -153,14 +155,16 @@ SQL
 
   post '/products/buy/:product_id' do
     authenticated!
-    buy_product(params[:product_id], current_user[:id])
-    redirect "/users/#{current_user[:id]}"
+    user = current_user
+    buy_product(params[:product_id], user[:id])
+    redirect "/users/#{user[:id]}"
   end
 
   post '/comments/:product_id' do
     authenticated!
-    create_comment(params[:product_id], current_user[:id], params[:content])
-    redirect "/users/#{current_user[:id]}"
+    user = current_user
+    create_comment(params[:product_id], user[:id], params[:content])
+    redirect "/users/#{user[:id]}"
   end
 
   get '/initialize' do
