@@ -239,7 +239,16 @@ ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
 2023/12/30 11:40:17 Waiting for Stopping All Benchmarkers ...
 ```
 
+- N+1 を解決したつもりだが、、、
 
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 11:58:29 Start GET /initialize
+2023/12/30 11:58:29 Benchmark Start!  Workload: 4
+2023/12/30 11:59:29 Benchmark Finish!
+2023/12/30 11:59:29 Score: 15914
+2023/12/30 11:59:29 Waiting for Stopping All Benchmarkers ...
+```
 
 
 

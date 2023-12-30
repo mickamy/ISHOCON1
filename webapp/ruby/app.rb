@@ -111,21 +111,32 @@ class Ishocon1::WebApp < Sinatra::Base
   get '/' do
     page = params[:page].to_i || 0
     last_id = page * 50
-    products = db.xquery("SELECT * FROM products where id < #{last_id} ORDER BY id DESC LIMIT 50}")
+    # products = db.xquery("SELECT * FROM products where id < #{last_id} ORDER BY id DESC LIMIT 50}")
     # products = db.xquery("SELECT * FROM products ORDER BY id DESC LIMIT 50 OFFSET #{}")
-    cmt_query = <<SQL
-SELECT *
-FROM comments as c
-INNER JOIN users as u
-ON c.user_id = u.id
-WHERE c.product_id = ?
+#     cmt_query = <<SQL
+# SELECT *
+# FROM comments as c
+# INNER JOIN users as u
+# ON c.user_id = u.id
+# WHERE c.product_id = ?
+# ORDER BY c.created_at DESC
+# LIMIT 5
+# SQL
+#     cmt_count_query = 'SELECT count(*) as count FROM comments WHERE product_id = ?'
+
+    products_and_comments_query = <<SQL
+SELECT p.* as products, c.* as comments
+FROM (select * from products where id < ? ORDER BY id DESC LIMIT 50) p
+LEFT OUTER JOIN comments as c ON c.product_id = p.id
+INNER JOIN users as u ON c.user_id = u.id
 ORDER BY c.created_at DESC
-LIMIT 5
+LIMIT 5;
 SQL
-    cmt_count_query = 'SELECT count(*) as count FROM comments WHERE product_id = ?'
+    products_and_comments = db.xquery(products_and_comments_query, last_id)
+    puts "================================= #{products_and_comments.inspect} ========================================="
 
     login_user = current_user
-    erb :index, locals: { products: products, cmt_query: cmt_query, cmt_count_query: cmt_count_query, user: login_user }
+    erb :index, locals: { products_and_comments: products_and_comments, user: login_user }
   end
 
   get '/users/:user_id' do

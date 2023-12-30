@@ -5,7 +5,9 @@
 </div>
 <div class="container">
   <div class="row">
-    <% products.each do |product| %>
+    <% products_and_comments_query.each do |product_and_comment| %>
+      <% product = product_and_comment[:p] %>
+      <% comments = product_and_comment[:c] %>
       <div class="col-md-4">
         <div class="panel panel-default">
           <div class="panel-heading">
@@ -17,8 +19,8 @@
             <p><%= product[:price] %>円</p>
             <h4>商品説明</h4>
             <p><%= product[:description][0..69] %>…</p>
-            <% comments = db.xquery(cmt_query, product[:id]) %>
-            <% comments_count = db.xquery(cmt_count_query, product[:id]).first[:count] %>
+            <%# <% comments = db.xquery(cmt_query, product[:id]) %> %>
+            <% comments_count = comments.count %>
             <h4><%= comments_count %>件のレビュー</h4>
             <ul>
               <% comments.each do |comment| %>
