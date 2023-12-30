@@ -124,7 +124,8 @@ LIMIT 5
 SQL
     cmt_count_query = 'SELECT count(*) as count FROM comments WHERE product_id = ?'
 
-    erb :index, locals: { products: products, cmt_query: cmt_query, cmt_count_query: cmt_count_query }
+    login_user = current_user
+    erb :index, locals: { products: products, cmt_query: cmt_query, cmt_count_query: cmt_count_query, user: login_user }
   end
 
   get '/users/:user_id' do
@@ -144,13 +145,17 @@ SQL
     end
 
     user = db.xquery('SELECT * FROM users WHERE id = ?', params[:user_id]).first
-    erb :mypage, locals: { products: products, user: user, total_pay: total_pay }
+
+    login_user = current_user
+    erb :mypage, locals: { products: products, user: user, total_pay: total_pay, login_user: login_user }
   end
 
   get '/products/:product_id' do
     product = db.xquery('SELECT * FROM products WHERE id = ?', params[:product_id]).first
     comments = db.xquery('SELECT * FROM comments WHERE product_id = ?', params[:product_id])
-    erb :product, locals: { product: product, comments: comments }
+
+    login_user = current_user
+    erb :product, locals: { product: product, comments: comments, login_user: login_user }
   end
 
   post '/products/buy/:product_id' do

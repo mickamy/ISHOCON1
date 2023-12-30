@@ -26,7 +26,7 @@
               <% end %>
             </ul>
           </div>
-          <% if current_user %>
+          <% if login_user %>
             <div class="panel-footer">
               <form method="POST" action="/products/buy/<%= product[:id] %>">
                 <fieldset>
