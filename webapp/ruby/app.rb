@@ -45,7 +45,7 @@ class Ishocon1::WebApp < Sinatra::Base
     end
 
     def authenticate(email, password)
-      user = db.xquery('SELECT * FROM users WHERE email = ?', email).first
+      user = db.xquery('SELECT id, password FROM users WHERE email = ?', email).first
       fail Ishocon1::AuthenticationError unless user.nil? == false && user[:password] == password
       session[:user_id] = user[:id]
     end
@@ -55,7 +55,7 @@ class Ishocon1::WebApp < Sinatra::Base
     end
 
     def current_user
-      db.xquery('SELECT * FROM users WHERE id = ?', session[:user_id]).first
+      db.xquery('SELECT id, name, email FROM users WHERE id = ?', session[:user_id]).first
     end
 
     def update_last_login(user_id)
@@ -151,7 +151,7 @@ SQL
   end
 
   get '/products/:product_id' do
-    product = db.xquery('SELECT * FROM products WHERE id = ?', params[:product_id]).first
+    product = db.xquery(' FROM products WHERE id = ?', params[:product_id]).first
     comments = db.xquery('SELECT * FROM comments WHERE product_id = ?', params[:product_id])
 
     login_user = current_user

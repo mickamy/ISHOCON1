@@ -216,8 +216,28 @@ ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
 2023/12/30 11:15:00 Waiting for Stopping All Benchmarkers ...
 ```
 
+- view で current_user にアクセスしないように
 
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 11:29:58 Start GET /initialize
+2023/12/30 11:29:58 Benchmark Start!  Workload: 4
+2023/12/30 11:30:58 Benchmark Finish!
+2023/12/30 11:30:58 Score: 16350
+2023/12/30 11:30:58 Waiting for Stopping All Benchmarkers ...
+```
 
+- current_user で id, name, email しか取らないように
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 11:39:17 Start GET /initialize
+2023/12/30 11:39:17 Benchmark Start!  Workload: 4
+
+2023/12/30 11:40:17 Benchmark Finish!
+2023/12/30 11:40:17 Score: 16340
+2023/12/30 11:40:17 Waiting for Stopping All Benchmarkers ...
+```
 
 
 
