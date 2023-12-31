@@ -1,3 +1,5 @@
+初めて private isucon したのでその記録
+
 ## 初回ベンチ
 
 ```
@@ -250,8 +252,323 @@ ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
 2023/12/30 11:59:29 Waiting for Stopping All Benchmarkers ...
 ```
 
+---
 
+## 重大なことに気づく
 
+- 本来 ssh した先で app code を書き換えないといけないところ、ローカルのファイルのみを編集していた。
+- ので、以上のうち、本当に聞いていたのは DB index だけ（bench の workload もあるが基本的に無視していい範囲）
+	- 逆に言えば、DB index だけでここまではいける
+- 以下は、そのことに気づいてからの note
 
+---
 
+- なんか壊したっぽいので、コードを戻した
 
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 14:09:45 Start GET /initialize
+2023/12/30 14:09:45 Benchmark Start!  Workload: 4
+2023/12/30 14:10:45 Benchmark Finish!
+2023/12/30 14:10:45 Score: 15857
+2023/12/30 14:10:45 Waiting for Stopping All Benchmarkers ...
+```
+
+- image の content cache
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 14:11:10 Start GET /initialize
+2023/12/30 14:11:10 Benchmark Start!  Workload: 4
+2023/12/30 14:12:10 Benchmark Finish!
+2023/12/30 14:12:10 Score: 16179
+2023/12/30 14:12:10 Waiting for Stopping All Benchmarkers ...
+```
+
+- current datetime の取得は DB に任せる
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 14:13:08 Start GET /initialize
+2023/12/30 14:13:08 Benchmark Start!  Workload: 4
+2023/12/30 14:14:08 Benchmark Finish!
+2023/12/30 14:14:08 Score: 16293
+2023/12/30 14:14:08 Waiting for Stopping All Benchmarkers ...
+```
+
+- current_user が都度 DB アクセスするのでなるべく使わない
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 14:23:53 Start GET /initialize
+2023/12/30 14:23:53 Benchmark Start!  Workload: 4
+2023/12/30 14:24:53 Benchmark Finish!
+2023/12/30 14:24:53 Score: 16999
+2023/12/30 14:24:53 Waiting for Stopping All Benchmarkers ...
+```
+
+- GET / の N+1 クエリ解消
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 14:42:32 Start GET /initialize
+2023/12/30 14:42:32 Benchmark Start!  Workload: 4
+2023/12/30 14:43:32 Benchmark Finish!
+2023/12/30 14:43:32 Score: 14819
+2023/12/30 14:43:32 Waiting for Stopping All Benchmarkers ...
+```
+
+- 遅くなったので、products を先に取ってそれ以外は IN 句でクエリすることに
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 15:24:50 Start GET /initialize
+2023/12/30 15:24:50 Benchmark Start!  Workload: 4
+2023/12/30 15:25:50 Benchmark Finish!
+2023/12/30 15:25:50 Score: 17715
+2023/12/30 15:25:50 Waiting for Stopping All Benchmarkers ...
+```
+
+- FK を貼る
+
+以下をそれぞれ貼るも、特にスコア悪くなったが、誤差の範囲か
+```
+ALTER TABLE comments ADD CONSTRAINT fk_comments_to_users FOREIGN KEY (user_id) REFERENCES users (id);
+ALTER TABLE histories ADD CONSTRAINT fk_histories_to_products FOREIGN KEY (product_id) REFERENCES products (id);
+```
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 15:30:51 Start GET /initialize
+2023/12/30 15:30:51 Benchmark Start!  Workload: 4
+2023/12/30 15:31:52 Benchmark Finish!
+2023/12/30 15:31:52 Score: 17549
+2023/12/30 15:31:52 Waiting for Stopping All Benchmarkers ...
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 15:34:54 Start GET /initialize
+2023/12/30 15:34:54 Benchmark Start!  Workload: 4
+2023/12/30 15:35:54 Benchmark Finish!
+2023/12/30 15:35:54 Score: 17658
+2023/12/30 15:35:54 Waiting for Stopping All Benchmarkers ...
+```
+
+- pt-query-digest が使えなかったから slow query log 設定を OFF
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 15:38:53 Start GET /initialize
+2023/12/30 15:38:53 Benchmark Start!  Workload: 4
+2023/12/30 15:39:53 Benchmark Finish!
+2023/12/30 15:39:53 Score: 17269
+2023/12/30 15:39:53 Waiting for Stopping All Benchmarkers ...
+```
+
+- histories に ID 降順の index 付与
+
+ALTER TABLE histories ADD INDEX idx_pk_desc (id DESC);
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 15:45:37 Start GET /initialize
+2023/12/30 15:45:37 Benchmark Start!  Workload: 4
+2023/12/30 15:46:37 Benchmark Finish!
+2023/12/30 15:46:37 Score: 17601
+2023/12/30 15:46:37 Waiting for Stopping All Benchmarkers ...
+```
+
+- unicorn のワーカ数を 4 から 8 に
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 15:50:39 Start GET /initialize
+2023/12/30 15:50:39 Benchmark Start!  Workload: 4
+2023/12/30 15:51:39 Benchmark Finish!
+2023/12/30 15:51:39 Score: 18073
+2023/12/30 15:51:39 Waiting for Stopping All Benchmarkers ...
+```
+
+- get '/products/:product_id' で使わないコメントを取得していたのを削除
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 15:54:58 Start GET /initialize
+2023/12/30 15:54:58 Benchmark Start!  Workload: 4
+2023/12/30 15:55:58 Benchmark Finish!
+2023/12/30 15:55:58 Score: 18269
+2023/12/30 15:55:58 Waiting for Stopping All Benchmarkers ...
+```
+
+- current_user で必要なカラムのみ取得
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 15:58:01 Start GET /initialize
+2023/12/30 15:58:01 Benchmark Start!  Workload: 4
+2023/12/30 15:59:01 Benchmark Finish!
+2023/12/30 15:59:01 Score: 18130
+2023/12/30 15:59:01 Waiting for Stopping All Benchmarkers ...
+```
+
+- 画像を webp に変換
+
+ベンチに引っかかった
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 16:07:41 Start GET /initialize
+2023/12/30 16:07:41 Benchmark Start!  Workload: 4
+2023/12/30 16:07:41 Invalid Content or DOM at GET /index
+2023/12/30 16:07:41 商品説明部分が正しくありません
+```
+
+- JPEG 画像を圧縮
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 16:12:06 Start GET /initialize
+2023/12/30 16:12:06 Benchmark Start!  Workload: 4
+2023/12/30 16:13:06 Benchmark Finish!
+2023/12/30 16:13:06 Score: 18410
+2023/12/30 16:13:06 Waiting for Stopping All Benchmarkers ...
+```
+
+- worker processs を 12 にしてみる
+
+特に意味はなさそうなので戻す
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 16:35:45 Start GET /initialize
+2023/12/30 16:35:45 Benchmark Start!  Workload: 4
+2023/12/30 16:36:45 Benchmark Finish!
+2023/12/30 16:36:45 Score: 17922
+2023/12/30 16:36:45 Waiting for Stopping All Benchmarkers ...
+```
+
+- session 管理に redis 導入
+
+あまり意味ない
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 16:40:37 Start GET /initialize
+2023/12/30 16:40:37 Benchmark Start!  Workload: 4
+2023/12/30 16:41:37 Benchmark Finish!
+2023/12/30 16:41:37 Score: 18301
+2023/12/30 16:41:37 Waiting for Stopping All Benchmarkers ...
+```
+
+- users のセッションに必要な情報を redis に載せる
+
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 17:43:39 Start GET /initialize
+2023/12/30 17:43:39 Benchmark Start!  Workload: 4
+2023/12/30 17:44:39 Benchmark Finish!
+2023/12/30 17:44:39 Score: 18078
+2023/12/30 17:44:39 Waiting for Stopping All Benchmarkers ...
+```
+
+- マイページの購入履歴の index を改善
+
+ALTER TABLE histories ADD INDEX idx_histories_user (user_id);
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 17:57:15 Start GET /initialize
+2023/12/30 17:57:15 Benchmark Start!  Workload: 4
+2023/12/30 17:58:15 Benchmark Finish!
+2023/12/30 17:58:15 Score: 25818
+2023/12/30 17:58:15 Waiting for Stopping All Benchmarkers ...
+```
+
+- CPU が空いたので worker を増やしてみる
+
+あまり意味はないっぽい
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 18:00:50 Start GET /initialize
+2023/12/30 18:00:50 Benchmark Start!  Workload: 4
+2023/12/30 18:01:50 Benchmark Finish!
+2023/12/30 18:01:50 Score: 25716
+2023/12/30 18:01:50 Waiting for Stopping All Benchmarkers ...
+```
+
+- static cache control の max age を増やす
+
+あまり意味はないっぽい
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 18:02:12 Start GET /initialize
+2023/12/30 18:02:12 Benchmark Start!  Workload: 4
+2023/12/30 18:03:12 Benchmark Finish!
+2023/12/30 18:03:12 Score: 25119
+2023/12/30 18:03:12 Waiting for Stopping All Benchmarkers ...
+```
+
+- workload を増やしてみる
+
+むしろ悪化した
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 8
+2023/12/30 18:03:19 Start GET /initialize
+2023/12/30 18:03:19 Benchmark Start!  Workload: 8
+2023/12/30 18:04:19 Benchmark Finish!
+2023/12/30 18:04:19 Score: 22720
+2023/12/30 18:04:19 Waiting for Stopping All Benchmarkers ...
+```
+
+12 も試す
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 12
+2023/12/30 18:04:26 Start GET /initialize
+2023/12/30 18:04:26 Benchmark Start!  Workload: 12
+2023/12/30 18:05:26 Benchmark Finish!
+2023/12/30 18:05:26 Score: 19528
+2023/12/30 18:05:26 Waiting for Stopping All Benchmarkers ...
+```
+
+worker wお 16 にして workload を 8 にしてみる
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 8
+2023/12/30 18:05:37 Start GET /initialize
+2023/12/30 18:05:37 Benchmark Start!  Workload: 8
+2023/12/30 18:06:37 Benchmark Finish!
+2023/12/30 18:06:37 Score: 21983
+2023/12/30 18:06:37 Waiting for Stopping All Benchmarkers ...
+```
+
+8 * 8
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 8
+2023/12/30 18:07:02 Start GET /initialize
+2023/12/30 18:07:02 Benchmark Start!  Workload: 8
+2023/12/30 18:08:02 Benchmark Finish!
+2023/12/30 18:08:02 Score: 21484
+2023/12/30 18:08:02 Waiting for Stopping All Benchmarkers ...
+```
+
+8 * 4　が一番安定するっぽい
+```
+ishocon@ip-172-16-10-156:~$ ./benchmark --workload 4
+2023/12/30 18:08:12 Start GET /initialize
+2023/12/30 18:08:12 Benchmark Start!  Workload: 4
+2023/12/30 18:09:12 Benchmark Finish!
+2023/12/30 18:09:12 Score: 25804
+2023/12/30 18:09:12 Waiting for Stopping All Benchmarkers ...
+```
+
+---
+
+- 以上で8時間の期限切れ
+- その後、nginx で静的ファイル配信までやったところ 58000 くらいまで出た
+	- 不慣れゆえ、conf の書き方で苦戦しまくったので、やはり8時間の間ではできなかった
+
+---
+
+## まとめ
+
+- DB index はちゃんと貼りましょう
+- 計測もちゃんとしましょう
+	- 今回は pt-query-digest がなぜか動かなかった（ハングした）
+	- slow query log の閾値が低すぎてファイルがデカすぎたのかと思ったけど、たいしたサイズじゃなかったので、何か問題があるはずだが、深入りしなかった
+	- いつかどこかで素振りしたい
+- 今時はクラウドでロードバランサ・CDN でしょとか言わず、nginx 勉強しましょう
+- 楽しいけど、誰だよこのクソコード書いたやつ、とかいった昔の悪夢を思い出すことになるので、用法・容量は正しく楽しんでやりましょう

@@ -1,3 +1,5 @@
+mickamy 個人の振り返りは [zenn](https://zenn.dev/mickamy/articles/ea1cdb68190f24) か [result/note.md](./result/note.md) を参照
+
 # ISHOCON1
 <img src="https://user-images.githubusercontent.com/1732016/41643273-b4994c02-74a5-11e8-950d-3a1c1e54f44f.png" width="250px">
 
